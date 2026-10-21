@@ -11,8 +11,8 @@ and HEVC/AV1 renditions (up to 1440p) from channels using Enhanced Broadcasting.
 
 | Step | What | State |
 | --- | --- | --- |
-| 1 | Download engine + command-line tool | ✅ this release |
-| 2 | Chat download | planned |
+| 1 | Download engine + command-line tool | ✅ |
+| 2 | Chat download (JSON + text) | ✅ |
 | 3 | Desktop app (Avalonia) with download queue | planned |
 | 4 | Installer with bundled ffmpeg, Twitch login for sub-only VODs | planned |
 
@@ -42,6 +42,8 @@ Options:
       --auth-token <tok>  twitch.tv auth-token cookie, for subscriber-only VODs
                           (or set TVD_AUTH_TOKEN).
       --ffmpeg <path>     Path to ffmpeg if it is not on PATH.
+      --chat              Also save the chat (.chat.json and .chat.txt next to the video).
+      --chat-only         Save only the chat, no video.
       --h264-only         Skip HEVC/AV1 renditions (for players without those codecs).
       --temp <dir>        Folder for temporary segment files.
 ```
@@ -57,7 +59,14 @@ tvd download https://www.twitch.tv/videos/2295401234 --start 1:00:00 --end 2:00:
 
 # A clip
 tvd download https://clips.twitch.tv/FunnyCleverOtterKappa-AbC123
+
+# A VOD's chat only, as JSON and readable text
+tvd download https://www.twitch.tv/videos/2295401234 --chat-only
 ```
+
+Chat timestamps are relative to the start of the saved video, so they line up with trimmed
+downloads. Clip chat comes from the VOD the clip was cut from, so it is only available while
+that VOD still exists.
 
 Trimmed VOD ranges are fetched segment by segment, so only the part you asked for is
 downloaded. Because the video is not re-encoded, cuts land on the nearest keyframe

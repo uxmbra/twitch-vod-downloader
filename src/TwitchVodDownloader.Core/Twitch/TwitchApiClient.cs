@@ -116,9 +116,10 @@ public sealed class TwitchApiClient
         const string metadataQuery = """
             query($slug: ID!) {
               clip(slug: $slug) {
-                slug title durationSeconds createdAt
+                slug title durationSeconds createdAt videoOffsetSeconds
                 broadcaster { login displayName }
                 game { name }
+                video { id }
               }
             }
             """;
@@ -167,17 +168,21 @@ public sealed class TwitchApiClient
             ChannelName: clip["broadcaster"]?["displayName"]?.GetValue<string>() ?? "unknown",
             Game: clip["game"]?["name"]?.GetValue<string>(),
             Qualities: qualities,
-            AccessToken: new PlaybackAccessToken(token["value"]!.GetValue<string>(), token["signature"]!.GetValue<string>()));
+            AccessToken: new PlaybackAccessToken(token["value"]!.GetValue<string>(), token["signature"]!.GetValue<string>()))
+        {
+            SourceVideoId = clip["video"]?["id"]?.GetValue<string>(),
+            SourceVideoOffset = clip["videoOffsetSeconds"] is JsonValue offset ? TimeSpan.FromSeconds(offset.GetValue<double>()) : null,
+        };
     }
 
     /// <summary>The clip file URL only works with the signed token appended.</summary>
     public static Uri SignClipUri(ClipQuality quality, PlaybackAccessToken token) =>
         new($"{quality.SourceUri}?sig={Uri.EscapeDataString(token.Signature)}&token={Uri.EscapeDataString(token.Value)}");
 
-    private async Task<JsonNode> QueryAsync(JsonObject body, bool authenticated, CancellationToken ct)
+    internal async Task<JsonNode> QueryAsync(JsonObject body, bool authenticated, CancellationToken ct, string clientId = WebClientId)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, GqlEndpoint) { Content = JsonContent.Create(body) };
-        request.Headers.Add("Client-ID", WebClientId);
+        request.Headers.Add("Client-ID", clientId);
         if (authenticated && _oauthToken is not null)
         {
             request.Headers.Add("Authorization", $"OAuth {_oauthToken}");

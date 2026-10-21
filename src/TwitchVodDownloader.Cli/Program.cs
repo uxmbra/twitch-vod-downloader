@@ -1,5 +1,6 @@
 using System.Globalization;
 using TwitchVodDownloader.Cli;
+using TwitchVodDownloader.Core.Chat;
 using TwitchVodDownloader.Core.Downloads;
 using TwitchVodDownloader.Core.Hls;
 using TwitchVodDownloader.Core.Media;
@@ -23,6 +24,8 @@ const string Usage = """
           --auth-token <tok>  twitch.tv auth-token cookie, for subscriber-only VODs.
                               Can also be set with the TVD_AUTH_TOKEN environment variable.
           --ffmpeg <path>     Path to ffmpeg if it is not on PATH.
+          --chat              Also save the chat (.chat.json and .chat.txt next to the video).
+          --chat-only         Save only the chat, no video.
           --h264-only         Skip HEVC/AV1 renditions (for players without those codecs).
           --temp <dir>        Folder for temporary segment files.
     """;
@@ -113,9 +116,13 @@ static async Task<int> DownloadAsync(TwitchApiClient api, HttpClient http, CliOp
     }
 
     var contents = options.Links.Select(TwitchUrlParser.Parse).ToList();
-    var ffmpeg = Ffmpeg.Locate(options.FfmpegPath);
-    var vods = new VodDownloader(api, http, ffmpeg);
+
+    // Chat-only runs never touch video, so they should not demand ffmpeg.
+    var ffmpeg = options.ChatOnly ? null : Ffmpeg.Locate(options.FfmpegPath);
+    var vods = ffmpeg is null ? null : new VodDownloader(api, http, ffmpeg);
     var clips = new ClipDownloader(api, http, ffmpeg);
+    var chat = new ChatDownloader(api);
+    var wantChat = options.Chat || options.ChatOnly;
 
     // With several links, --output is a folder; with one it may be a file or a folder.
     var outputIsFolder = contents.Count > 1
@@ -132,43 +139,68 @@ static async Task<int> DownloadAsync(TwitchApiClient api, HttpClient http, CliOp
         var prefix = contents.Count > 1 ? $"[{i + 1}/{contents.Count}] " : "";
         try
         {
-            DownloadResult result;
             if (content.Kind == ContentKind.Clip)
             {
                 var info = await api.GetClipAsync(content.Id, ct);
                 var path = folder is null ? options.Output! : Path.Combine(folder, OutputNames.For(info));
                 Console.WriteLine($"{prefix}Clip: {info.ChannelName} - {info.Title}");
-                result = await clips.DownloadAsync(
-                    new ClipDownloadRequest(content.Id, path)
+                if (!options.ChatOnly)
+                {
+                    var result = await clips.DownloadAsync(
+                        new ClipDownloadRequest(content.Id, path)
+                        {
+                            Quality = options.Quality,
+                            Start = options.Start,
+                            End = options.End,
+                            TempDirectory = options.TempDirectory,
+                        },
+                        new ConsoleProgress(),
+                        ct);
+                    Console.WriteLine($"\n{prefix}Saved {result.Quality}, {FormatBytes(result.Bytes)}: {result.OutputPath}");
+                }
+
+                if (wantChat)
+                {
+                    if (info.SourceVideoId is not { } videoId || info.SourceVideoOffset is not { } clipStart)
                     {
-                        Quality = options.Quality,
-                        Start = options.Start,
-                        End = options.End,
-                        TempDirectory = options.TempDirectory,
-                    },
-                    new ConsoleProgress(),
-                    ct);
+                        Console.WriteLine($"{prefix}No chat: the VOD this clip came from is no longer available.");
+                    }
+                    else
+                    {
+                        // The clip's chat is its source VOD's chat over the clip's window.
+                        var from = clipStart + (options.Start ?? TimeSpan.Zero);
+                        var to = clipStart + (options.End ?? info.Length);
+                        await SaveChatAsync(chat, null, videoId, path, from, to, info.Length, prefix, ct);
+                    }
+                }
             }
             else
             {
                 var info = await api.GetVideoAsync(content.Id, ct);
                 var path = folder is null ? options.Output! : Path.Combine(folder, OutputNames.For(info));
                 Console.WriteLine($"{prefix}{info.BroadcastType.ToLowerInvariant()}: {info.ChannelName} - {info.Title} ({info.Length:hh\\:mm\\:ss})");
-                result = await vods.DownloadAsync(
-                    new VodDownloadRequest(content.Id, path)
-                    {
-                        Quality = options.Quality,
-                        Start = options.Start,
-                        End = options.End,
-                        MaxParallelDownloads = options.Threads,
-                        IncludeAdvancedCodecs = !options.H264Only,
-                        TempDirectory = options.TempDirectory,
-                    },
-                    new ConsoleProgress(),
-                    ct);
-            }
+                if (vods is not null)
+                {
+                    var result = await vods.DownloadAsync(
+                        new VodDownloadRequest(content.Id, path)
+                        {
+                            Quality = options.Quality,
+                            Start = options.Start,
+                            End = options.End,
+                            MaxParallelDownloads = options.Threads,
+                            IncludeAdvancedCodecs = !options.H264Only,
+                            TempDirectory = options.TempDirectory,
+                        },
+                        new ConsoleProgress(),
+                        ct);
+                    Console.WriteLine($"\n{prefix}Saved {result.Quality}, {FormatBytes(result.Bytes)}: {result.OutputPath}");
+                }
 
-            Console.WriteLine($"\n{prefix}Saved {result.Quality}, {FormatBytes(result.Bytes)}: {result.OutputPath}");
+                if (wantChat)
+                {
+                    await SaveChatAsync(chat, info, content.Id, path, options.Start, options.End, info.Length, prefix, ct);
+                }
+            }
         }
         catch (Exception ex) when (contents.Count > 1 && ex is TwitchApiException or FfmpegException or HttpRequestException or ArgumentException)
         {
@@ -186,12 +218,50 @@ static async Task<int> DownloadAsync(TwitchApiClient api, HttpClient http, CliOp
     return failures == 0 ? 0 : 1;
 }
 
+static async Task SaveChatAsync(
+    ChatDownloader chat,
+    VideoInfo? video,
+    string videoId,
+    string videoPath,
+    TimeSpan? start,
+    TimeSpan? end,
+    TimeSpan length,
+    string prefix,
+    CancellationToken ct)
+{
+    var comments = await chat.DownloadAsync(videoId, start, end, video?.Length, new ConsoleChatProgress(), ct);
+
+    var basePath = Path.ChangeExtension(videoPath, null);
+    var from = start ?? TimeSpan.Zero;
+    await ChatWriter.WriteJsonAsync(basePath + ".chat.json", video, comments, from, ct);
+    await ChatWriter.WriteTextAsync(basePath + ".chat.txt", comments, from, ct);
+    Console.WriteLine($"\n{prefix}Saved {comments.Count:N0} chat messages: {basePath}.chat.json / .chat.txt");
+}
+
 static string FormatBytes(long bytes) => bytes switch
 {
     >= 1L << 30 => $"{bytes / (double)(1L << 30):0.00} GB",
     >= 1L << 20 => $"{bytes / (double)(1L << 20):0.0} MB",
     _ => $"{bytes / 1024.0:0} KB",
 };
+
+internal sealed class ConsoleChatProgress : IProgress<ChatProgress>
+{
+    private DateTime _lastDraw = DateTime.MinValue;
+
+    public void Report(ChatProgress value)
+    {
+        var now = DateTime.UtcNow;
+        if (now - _lastDraw < TimeSpan.FromMilliseconds(200))
+        {
+            return;
+        }
+
+        _lastDraw = now;
+        var percent = value.Fraction is { } f ? $"{f * 100,5:0.0}% " : "";
+        Console.Write($"\r  Chat {percent}{value.Comments:N0} messages".PadRight(60));
+    }
+}
 
 /// <summary>Draws a single updating progress line. Reports arrive from many threads.</summary>
 internal sealed class ConsoleProgress : IProgress<DownloadProgress>

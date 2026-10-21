@@ -27,6 +27,10 @@ internal sealed class CliOptions
 
     public bool H264Only { get; private set; }
 
+    public bool Chat { get; private set; }
+
+    public bool ChatOnly { get; private set; }
+
     public static CliOptions Parse(string[] args)
     {
         var options = new CliOptions();
@@ -68,6 +72,12 @@ internal sealed class CliOptions
                     break;
                 case "--temp":
                     options.TempDirectory = Next();
+                    break;
+                case "--chat":
+                    options.Chat = true;
+                    break;
+                case "--chat-only":
+                    options.ChatOnly = true;
                     break;
                 case "--h264-only":
                     options.H264Only = true;
