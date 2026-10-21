@@ -18,7 +18,9 @@ public sealed record HlsVariant(
 
     public bool IsAudioOnly => Height == 0 || GroupId.Equals("audio_only", StringComparison.OrdinalIgnoreCase);
 
-    public override string ToString() => $"{Name} ({Width}x{Height}, {Bandwidth / 1000} kbps{(Codecs is null ? "" : ", " + Codecs)})";
+    public override string ToString() =>
+        $"{Name}{(IsSource && !Name.Contains("source", StringComparison.OrdinalIgnoreCase) ? " [source]" : "")}"
+        + $" ({Width}x{Height}, {Bandwidth / 1000} kbps{(Codecs is null ? "" : ", " + Codecs)})";
 }
 
 public sealed record HlsSegment(Uri Uri, TimeSpan Start, TimeSpan Duration)
