@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>tvd</AssemblyName>
+    <RootNamespace>TwitchVodDownloader.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TwitchVodDownloader.Core\TwitchVodDownloader.Core.csproj" />
+  </ItemGroup>
+
+</Project>
