@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F6935F6C-6539-4CC8-8952-B06B8C913453}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchVodDownloader.Core", "src\TwitchVodDownloader.Core\TwitchVodDownloader.Core.csproj", "{381D5A85-5CE6-408B-9150-1DF3524D438A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchVodDownloader.Cli", "src\TwitchVodDownloader.Cli\TwitchVodDownloader.Cli.csproj", "{8CECB166-AE3A-4A99-874A-C8AD0CDDEDDA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{3C23136A-CFFD-492F-B67B-39CBACBDAE1F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchVodDownloader.Core.Tests", "tests\TwitchVodDownloader.Core.Tests\TwitchVodDownloader.Core.Tests.csproj", "{32FB1D7C-BF80-427D-84DC-C5392911D011}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{381D5A85-5CE6-408B-9150-1DF3524D438A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{381D5A85-5CE6-408B-9150-1DF3524D438A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{381D5A85-5CE6-408B-9150-1DF3524D438A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{381D5A85-5CE6-408B-9150-1DF3524D438A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8CECB166-AE3A-4A99-874A-C8AD0CDDEDDA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8CECB166-AE3A-4A99-874A-C8AD0CDDEDDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8CECB166-AE3A-4A99-874A-C8AD0CDDEDDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8CECB166-AE3A-4A99-874A-C8AD0CDDEDDA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{32FB1D7C-BF80-427D-84DC-C5392911D011}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32FB1D7C-BF80-427D-84DC-C5392911D011}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32FB1D7C-BF80-427D-84DC-C5392911D011}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32FB1D7C-BF80-427D-84DC-C5392911D011}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{381D5A85-5CE6-408B-9150-1DF3524D438A} = {F6935F6C-6539-4CC8-8952-B06B8C913453}
+		{8CECB166-AE3A-4A99-874A-C8AD0CDDEDDA} = {F6935F6C-6539-4CC8-8952-B06B8C913453}
+		{32FB1D7C-BF80-427D-84DC-C5392911D011} = {3C23136A-CFFD-492F-B67B-39CBACBDAE1F}
+	EndGlobalSection
+EndGlobal
