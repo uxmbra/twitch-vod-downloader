@@ -33,6 +33,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         RefreshFfmpegStatus();
     }
 
+    public string Version { get; } = "v" + (typeof(MainWindowViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.0.0");
+
     public IReadOnlyList<string> Qualities { get; } = ["Best", "1080p60", "1080p", "720p60", "720p", "480p", "360p", "Audio only"];
 
     public ObservableCollection<QueueItemViewModel> Items { get; } = [];

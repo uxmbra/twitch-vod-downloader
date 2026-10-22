@@ -7,8 +7,24 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <Version>0.3.0</Version>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Version>0.4.0</Version>
+    <Product>Twitch VOD Downloader</Product>
+    <Description>Download Twitch VODs, highlights, clips and chat at the best available quality.</Description>
   </PropertyGroup>
+
+  <!-- Release builds: one self-contained exe that runs without installing .NET. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" />
