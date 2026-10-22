@@ -1,7 +1,6 @@
 using System.Globalization;
 using TwitchVodDownloader.Cli;
-using TwitchVodDownloader.Core.Chat;
-using TwitchVodDownloader.Core.Downloads;
+using TwitchVodDownloader.Core.Jobs;
 using TwitchVodDownloader.Core.Hls;
 using TwitchVodDownloader.Core.Media;
 using TwitchVodDownloader.Core.Twitch;
@@ -118,11 +117,18 @@ static async Task<int> DownloadAsync(TwitchApiClient api, HttpClient http, CliOp
     var contents = options.Links.Select(TwitchUrlParser.Parse).ToList();
 
     // Chat-only runs never touch video, so they should not demand ffmpeg.
-    var ffmpeg = options.ChatOnly ? null : Ffmpeg.Locate(options.FfmpegPath);
-    var vods = ffmpeg is null ? null : new VodDownloader(api, http, ffmpeg);
-    var clips = new ClipDownloader(api, http, ffmpeg);
-    var chat = new ChatDownloader(api);
-    var wantChat = options.Chat || options.ChatOnly;
+    var service = new DownloadService(api, http, options.ChatOnly ? null : Ffmpeg.Locate(options.FfmpegPath));
+    var jobOptions = new JobOptions
+    {
+        Quality = options.Quality,
+        Start = options.Start,
+        End = options.End,
+        IncludeVideo = !options.ChatOnly,
+        IncludeChat = options.Chat || options.ChatOnly,
+        MaxParallelDownloads = options.Threads,
+        IncludeAdvancedCodecs = !options.H264Only,
+        TempDirectory = options.TempDirectory,
+    };
 
     // With several links, --output is a folder; with one it may be a file or a folder.
     var outputIsFolder = contents.Count > 1
@@ -135,71 +141,28 @@ static async Task<int> DownloadAsync(TwitchApiClient api, HttpClient http, CliOp
     var failures = 0;
     for (var i = 0; i < contents.Count; i++)
     {
-        var content = contents[i];
         var prefix = contents.Count > 1 ? $"[{i + 1}/{contents.Count}] " : "";
         try
         {
-            if (content.Kind == ContentKind.Clip)
-            {
-                var info = await api.GetClipAsync(content.Id, ct);
-                var path = folder is null ? options.Output! : Path.Combine(folder, OutputNames.For(info));
-                Console.WriteLine($"{prefix}Clip: {info.ChannelName} - {info.Title}");
-                if (!options.ChatOnly)
-                {
-                    var result = await clips.DownloadAsync(
-                        new ClipDownloadRequest(content.Id, path)
-                        {
-                            Quality = options.Quality,
-                            Start = options.Start,
-                            End = options.End,
-                            TempDirectory = options.TempDirectory,
-                        },
-                        new ConsoleProgress(),
-                        ct);
-                    Console.WriteLine($"\n{prefix}Saved {result.Quality}, {FormatBytes(result.Bytes)}: {result.OutputPath}");
-                }
+            var media = await service.ResolveAsync(contents[i], ct);
+            var path = folder is null ? options.Output! : Path.Combine(folder, media.DefaultFileName);
+            Console.WriteLine($"{prefix}{media.KindLabel}: {media.Channel} - {media.Title} ({media.Length:hh\\:mm\\:ss})");
 
-                if (wantChat)
-                {
-                    if (info.SourceVideoId is not { } videoId || info.SourceVideoOffset is not { } clipStart)
-                    {
-                        Console.WriteLine($"{prefix}No chat: the VOD this clip came from is no longer available.");
-                    }
-                    else
-                    {
-                        // The clip's chat is its source VOD's chat over the clip's window.
-                        var from = clipStart + (options.Start ?? TimeSpan.Zero);
-                        var to = clipStart + (options.End ?? info.Length);
-                        await SaveChatAsync(chat, null, videoId, path, from, to, info.Length, prefix, ct);
-                    }
-                }
+            var result = await service.RunAsync(media, path, jobOptions, new ConsoleProgress(), ct);
+            Console.WriteLine();
+            if (result.VideoPath is not null)
+            {
+                Console.WriteLine($"{prefix}Saved {result.Quality}, {FormatBytes(result.VideoBytes)}: {result.VideoPath}");
             }
-            else
-            {
-                var info = await api.GetVideoAsync(content.Id, ct);
-                var path = folder is null ? options.Output! : Path.Combine(folder, OutputNames.For(info));
-                Console.WriteLine($"{prefix}{info.BroadcastType.ToLowerInvariant()}: {info.ChannelName} - {info.Title} ({info.Length:hh\\:mm\\:ss})");
-                if (vods is not null)
-                {
-                    var result = await vods.DownloadAsync(
-                        new VodDownloadRequest(content.Id, path)
-                        {
-                            Quality = options.Quality,
-                            Start = options.Start,
-                            End = options.End,
-                            MaxParallelDownloads = options.Threads,
-                            IncludeAdvancedCodecs = !options.H264Only,
-                            TempDirectory = options.TempDirectory,
-                        },
-                        new ConsoleProgress(),
-                        ct);
-                    Console.WriteLine($"\n{prefix}Saved {result.Quality}, {FormatBytes(result.Bytes)}: {result.OutputPath}");
-                }
 
-                if (wantChat)
-                {
-                    await SaveChatAsync(chat, info, content.Id, path, options.Start, options.End, info.Length, prefix, ct);
-                }
+            if (result.ChatPath is not null)
+            {
+                Console.WriteLine($"{prefix}Saved {result.ChatMessages:N0} chat messages: {Path.ChangeExtension(result.ChatPath, null)}.json / .txt");
+            }
+
+            if (result.Warning is not null)
+            {
+                Console.WriteLine($"{prefix}{result.Warning}");
             }
         }
         catch (Exception ex) when (contents.Count > 1 && ex is TwitchApiException or FfmpegException or HttpRequestException or ArgumentException)
@@ -218,26 +181,6 @@ static async Task<int> DownloadAsync(TwitchApiClient api, HttpClient http, CliOp
     return failures == 0 ? 0 : 1;
 }
 
-static async Task SaveChatAsync(
-    ChatDownloader chat,
-    VideoInfo? video,
-    string videoId,
-    string videoPath,
-    TimeSpan? start,
-    TimeSpan? end,
-    TimeSpan length,
-    string prefix,
-    CancellationToken ct)
-{
-    var comments = await chat.DownloadAsync(videoId, start, end, video?.Length, new ConsoleChatProgress(), ct);
-
-    var basePath = Path.ChangeExtension(videoPath, null);
-    var from = start ?? TimeSpan.Zero;
-    await ChatWriter.WriteJsonAsync(basePath + ".chat.json", video, comments, from, ct);
-    await ChatWriter.WriteTextAsync(basePath + ".chat.txt", comments, from, ct);
-    Console.WriteLine($"\n{prefix}Saved {comments.Count:N0} chat messages: {basePath}.chat.json / .chat.txt");
-}
-
 static string FormatBytes(long bytes) => bytes switch
 {
     >= 1L << 30 => $"{bytes / (double)(1L << 30):0.00} GB",
@@ -245,52 +188,33 @@ static string FormatBytes(long bytes) => bytes switch
     _ => $"{bytes / 1024.0:0} KB",
 };
 
-internal sealed class ConsoleChatProgress : IProgress<ChatProgress>
-{
-    private DateTime _lastDraw = DateTime.MinValue;
-
-    public void Report(ChatProgress value)
-    {
-        var now = DateTime.UtcNow;
-        if (now - _lastDraw < TimeSpan.FromMilliseconds(200))
-        {
-            return;
-        }
-
-        _lastDraw = now;
-        var percent = value.Fraction is { } f ? $"{f * 100,5:0.0}% " : "";
-        Console.Write($"\r  Chat {percent}{value.Comments:N0} messages".PadRight(60));
-    }
-}
-
 /// <summary>Draws a single updating progress line. Reports arrive from many threads.</summary>
-internal sealed class ConsoleProgress : IProgress<DownloadProgress>
+internal sealed class ConsoleProgress : IProgress<JobProgress>
 {
     private readonly object _lock = new();
     private DateTime _lastDraw = DateTime.MinValue;
+    private JobProgress? _last;
 
-    public void Report(DownloadProgress value)
+    public void Report(JobProgress value)
     {
         lock (_lock)
         {
             var now = DateTime.UtcNow;
-            var important = value.Stage != DownloadStage.Downloading || value.PartsDone == value.PartsTotal;
-            if (!important && now - _lastDraw < TimeSpan.FromMilliseconds(200))
+            var changed = _last is null || _last.Part != value.Part || value.Fraction is 1;
+            if (!changed && now - _lastDraw < TimeSpan.FromMilliseconds(200))
             {
                 return;
             }
 
-            _lastDraw = now;
-            var percent = value.Fraction is { } f ? $"{f * 100,5:0.0}%" : "";
-            var parts = value.PartsTotal > 1 ? $" {value.PartsDone}/{value.PartsTotal} segments" : "";
-            var mb = $" {value.BytesDownloaded / (1024.0 * 1024.0):0.0} MB";
-            var line = value.Stage switch
+            if (_last is not null && _last.Part != value.Part)
             {
-                DownloadStage.Preparing => "  Preparing...",
-                DownloadStage.Downloading => $"  Downloading {percent}{parts}{mb}",
-                DownloadStage.Finalizing => "  Finalizing with ffmpeg...",
-                _ => "  Done.",
-            };
+                Console.WriteLine();
+            }
+
+            _last = value;
+            _lastDraw = now;
+            var percent = value.Fraction is { } f ? $"{f * 100,5:0.0}% " : "";
+            var line = $"  {value.Part}: {percent}{value.Detail}";
             Console.Write("\r" + line.PadRight(Math.Max(Console.IsOutputRedirected ? 0 : Console.WindowWidth - 1, line.Length)));
         }
     }

@@ -1,0 +1,19 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="TwitchVodDownloader.App.App"
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <!-- Twitch purple as the accent for buttons, checkboxes and focus. -->
+    <Color x:Key="SystemAccentColor">#9147FF</Color>
+    <Color x:Key="SystemAccentColorDark1">#772CE8</Color>
+    <Color x:Key="SystemAccentColorDark2">#5C16C5</Color>
+    <Color x:Key="SystemAccentColorDark3">#451093</Color>
+    <Color x:Key="SystemAccentColorLight1">#A970FF</Color>
+    <Color x:Key="SystemAccentColorLight2">#BF94FF</Color>
+    <Color x:Key="SystemAccentColorLight3">#D1B3FF</Color>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://TwitchVodDownloader/Styles.axaml" />
+  </Application.Styles>
+</Application>

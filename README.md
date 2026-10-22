@@ -1,6 +1,6 @@
 # twitch-vod-downloader
 
-A Windows desktop app (in progress) for downloading Twitch VODs, highlights and clips at the
+A Windows desktop app for downloading Twitch VODs, highlights and clips at the
 highest quality Twitch offers, with batch downloads, trimming and chat export.
 
 Video is never re-encoded: the original segments are fetched and stream-copied into an MP4,
@@ -13,13 +13,25 @@ and HEVC/AV1 renditions (up to 1440p) from channels using Enhanced Broadcasting.
 | --- | --- | --- |
 | 1 | Download engine + command-line tool | ✅ |
 | 2 | Chat download (JSON + text) | ✅ |
-| 3 | Desktop app (Avalonia) with download queue | planned |
+| 3 | Desktop app (Avalonia) with download queue | ✅ |
 | 4 | Installer with bundled ffmpeg, Twitch login for sub-only VODs | planned |
 
 ## Requirements
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - ffmpeg on your PATH: `winget install Gyan.FFmpeg`
+
+## Desktop app
+
+```powershell
+dotnet run --project src/TwitchVodDownloader.App
+```
+
+Paste one or more links (one per line), pick a quality and an optional start/end time, tick
+Video and/or Chat, and press **Add to queue**. Downloads run in the background with progress
+for each one; finished items have a **Show** button that opens Explorer on the file.
+Settings (output folder, parallelism, ffmpeg path, auth token) are saved in
+`%APPDATA%\TwitchVodDownloader\settings.json`; the auth token is encrypted for your Windows user.
 
 ## Command-line usage
 
@@ -75,9 +87,10 @@ downloaded. Because the video is not re-encoded, cuts land on the nearest keyfra
 ## Project layout
 
 ```text
-src/TwitchVodDownloader.Core   download engine: Twitch API, HLS parsing, downloaders, ffmpeg
+src/TwitchVodDownloader.Core   download engine: Twitch API, HLS, chat, downloaders, ffmpeg
+src/TwitchVodDownloader.App    desktop app (Avalonia, MVVM)
 src/TwitchVodDownloader.Cli    command-line front end (tvd)
-tests/                         unit tests and an end-to-end test against a fake Twitch
+tests/                         unit tests, an end-to-end test against a fake Twitch, app tests
 ```
 
 ## How it works
