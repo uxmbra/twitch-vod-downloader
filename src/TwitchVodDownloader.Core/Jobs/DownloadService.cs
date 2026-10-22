@@ -45,7 +45,11 @@ public enum JobPart
 /// <param name="Fraction">0 to 1 for the current part, or null when unknown.</param>
 public sealed record JobProgress(JobPart Part, double? Fraction, string Detail);
 
-public sealed record JobResult(string? VideoPath, string? Quality, long VideoBytes, string? ChatPath, int ChatMessages, string? Warning);
+/// <param name="ChatPath">The .chat.json file; the .chat.html and .chat.txt sit beside it.</param>
+public sealed record JobResult(string? VideoPath, string? Quality, long VideoBytes, string? ChatPath, int ChatMessages, string? Warning)
+{
+    public string? ChatHtmlPath => ChatPath is null ? null : Path.ChangeExtension(ChatPath, ".html");
+}
 
 /// <summary>
 /// One place that turns a link plus options into files on disk: video and/or chat, for VODs,
@@ -143,12 +147,29 @@ public sealed class DownloadService(TwitchApiClient api, HttpClient http, Ffmpeg
                 var relativeStart = from ?? TimeSpan.Zero;
                 await ChatWriter.WriteJsonAsync(basePath + ".chat.json", info, comments, relativeStart, ct);
                 await ChatWriter.WriteTextAsync(basePath + ".chat.txt", comments, relativeStart, ct);
+
+                var badges = await GetBadgesAsync(media.Video?.ChannelLogin ?? media.Clip?.ChannelLogin, ct);
+                await ChatHtmlWriter.WriteAsync(
+                    basePath + ".chat.html", media.Title, media.Channel, media.CreatedAt, comments, relativeStart, badges, ct);
                 chatPath = basePath + ".chat.json";
                 chatCount = comments.Count;
             }
         }
 
         return new JobResult(videoPath, quality, bytes, chatPath, chatCount, warning);
+    }
+
+    private async Task<IReadOnlyList<ChatBadgeImage>> GetBadgesAsync(string? channelLogin, CancellationToken ct)
+    {
+        try
+        {
+            return await api.GetChatBadgesAsync(channelLogin, ct);
+        }
+        catch (Exception ex) when (ex is TwitchApiException or HttpRequestException or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            // Badge pictures are decoration; the chat export is still complete without them.
+            return [];
+        }
     }
 
     /// <summary>A clip's chat is its source VOD's chat over the clip's window.</summary>

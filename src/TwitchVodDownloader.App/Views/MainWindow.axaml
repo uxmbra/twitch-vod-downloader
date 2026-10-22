@@ -124,6 +124,8 @@
                                  ToolTip.Tip="{Binding StatusText}" />
                     </StackPanel>
                     <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                      <Button Content="Chat" Command="{Binding OpenChatCommand}" IsVisible="{Binding CanOpenChat}"
+                              ToolTip.Tip="Open the Twitch-styled chat in your browser" />
                       <Button Content="Show" Command="{Binding RevealCommand}" IsVisible="{Binding CanReveal}" />
                       <Button Content="Retry" Command="{Binding RetryCommand}" IsVisible="{Binding CanRetry}" />
                       <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" />

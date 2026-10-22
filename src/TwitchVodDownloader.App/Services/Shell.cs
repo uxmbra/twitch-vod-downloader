@@ -4,6 +4,7 @@ namespace TwitchVodDownloader.App.Services;
 
 internal static class Shell
 {
+    /// <summary>Opens a folder in Explorer, or a file in its default app.</summary>
     public static void OpenFolder(string path)
     {
         try

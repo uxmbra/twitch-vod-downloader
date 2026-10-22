@@ -43,7 +43,7 @@ public sealed partial class QueueItemViewModel : ObservableObject
     public MediaInfo? Media { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsActive), nameof(IsFinished), nameof(CanCancel), nameof(IsFailed), nameof(CanRetry))]
+    [NotifyPropertyChangedFor(nameof(IsActive), nameof(IsFinished), nameof(CanCancel), nameof(IsFailed), nameof(CanRetry), nameof(CanReveal), nameof(CanOpenChat))]
     private QueueState _state = QueueState.LookingUp;
 
     [ObservableProperty]
@@ -65,6 +65,10 @@ public sealed partial class QueueItemViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(CanReveal))]
     private string? _outputPath;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanOpenChat))]
+    private string? _chatHtmlPath;
+
     public bool IsActive => State is QueueState.LookingUp or QueueState.Downloading;
 
     public bool IsFinished => State is QueueState.Done or QueueState.Failed or QueueState.Cancelled;
@@ -76,6 +80,8 @@ public sealed partial class QueueItemViewModel : ObservableObject
     public bool CanRetry => State is QueueState.Failed or QueueState.Cancelled && Media is not null;
 
     public bool CanReveal => OutputPath is not null && State == QueueState.Done;
+
+    public bool CanOpenChat => ChatHtmlPath is not null && State == QueueState.Done;
 
     public async Task ResolveAsync(DownloadService service)
     {
@@ -117,6 +123,7 @@ public sealed partial class QueueItemViewModel : ObservableObject
         {
             var result = await service.RunAsync(Media, path, Options, progress, _cts.Token);
             OutputPath = result.VideoPath ?? result.ChatPath;
+            ChatHtmlPath = result.ChatHtmlPath;
             Progress = 100;
             IsIndeterminate = false;
 
@@ -172,6 +179,15 @@ public sealed partial class QueueItemViewModel : ObservableObject
         if (OutputPath is not null)
         {
             Shell.RevealFile(OutputPath);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenChat()
+    {
+        if (ChatHtmlPath is not null)
+        {
+            Shell.OpenFolder(ChatHtmlPath);
         }
     }
 
