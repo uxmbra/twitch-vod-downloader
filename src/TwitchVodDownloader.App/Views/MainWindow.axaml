@@ -1,0 +1,143 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:TwitchVodDownloader.App.ViewModels"
+        x:Class="TwitchVodDownloader.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Twitch VOD Downloader"
+        Width="1040" Height="760" MinWidth="760" MinHeight="560"
+        Background="#0E0E10">
+
+  <DockPanel Margin="16">
+
+    <!-- Header -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+      <StackPanel>
+        <TextBlock Text="Twitch VOD Downloader" FontSize="22" FontWeight="Bold" />
+        <TextBlock Classes="muted" Text="VODs, highlights and clips at the best quality Twitch offers, with chat." />
+      </StackPanel>
+      <Button Grid.Column="1" Content="Settings" Command="{Binding ToggleSettingsCommand}" VerticalAlignment="Center" />
+    </Grid>
+
+    <!-- ffmpeg warning -->
+    <Border DockPanel.Dock="Top" Background="#3A1F1F" CornerRadius="6" Padding="12,8" Margin="0,0,0,12"
+            IsVisible="{Binding FfmpegWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <TextBlock Text="{Binding FfmpegWarning}" TextWrapping="Wrap" Foreground="#FFB4B4" />
+    </Border>
+
+    <!-- Settings -->
+    <Border DockPanel.Dock="Top" Classes="card" Margin="0,0,0,12" IsVisible="{Binding IsSettingsOpen}">
+      <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,12,Auto,12,Auto">
+        <StackPanel>
+          <TextBlock Classes="label" Text="Segments downloaded at once (per video)" />
+          <NumericUpDown Value="{Binding SegmentThreads}" Minimum="1" Maximum="32" FormatString="0" />
+        </StackPanel>
+        <StackPanel Grid.Column="2">
+          <TextBlock Classes="label" Text="Videos downloaded at once" />
+          <NumericUpDown Value="{Binding ConcurrentDownloads}" Minimum="1" Maximum="5" FormatString="0" />
+        </StackPanel>
+        <StackPanel Grid.Row="2">
+          <TextBlock Classes="label" Text="ffmpeg location (leave empty to find it automatically)" />
+          <TextBox Text="{Binding FfmpegPath}" Watermark="C:\ffmpeg\bin\ffmpeg.exe" />
+        </StackPanel>
+        <StackPanel Grid.Row="2" Grid.Column="2">
+          <TextBlock Classes="label" Text="Twitch auth token (only for subscriber-only VODs)" />
+          <TextBox Text="{Binding AuthToken}" PasswordChar="•" Watermark="auth-token cookie from twitch.tv" />
+        </StackPanel>
+        <CheckBox Grid.Row="4" Grid.ColumnSpan="3" IsChecked="{Binding H264Only}"
+                  Content="H.264 only (skip HEVC/AV1 renditions, for older players; may lower the top quality)" />
+      </Grid>
+    </Border>
+
+    <!-- Add links -->
+    <Border DockPanel.Dock="Top" Classes="card" Margin="0,0,0,12">
+      <StackPanel Spacing="12">
+        <StackPanel>
+          <TextBlock Classes="label" Text="Links, one per line" />
+          <TextBox Text="{Binding LinksText}" AcceptsReturn="True" TextWrapping="NoWrap" Height="96"
+                   Watermark="https://www.twitch.tv/videos/…&#10;https://clips.twitch.tv/…" />
+        </StackPanel>
+
+        <WrapPanel>
+          <StackPanel Margin="0,0,16,8">
+            <TextBlock Classes="label" Text="Quality" />
+            <ComboBox ItemsSource="{Binding Qualities}" SelectedItem="{Binding SelectedQuality}" Width="140" />
+          </StackPanel>
+          <StackPanel Margin="0,0,16,8">
+            <TextBlock Classes="label" Text="Start (optional)" />
+            <TextBox Text="{Binding StartText}" Watermark="0:00:00" Width="110" />
+          </StackPanel>
+          <StackPanel Margin="0,0,16,8">
+            <TextBlock Classes="label" Text="End (optional)" />
+            <TextBox Text="{Binding EndText}" Watermark="1:30:00" Width="110" />
+          </StackPanel>
+          <StackPanel Margin="0,0,16,8">
+            <TextBlock Classes="label" Text="Save" />
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <CheckBox IsChecked="{Binding IncludeVideo}" Content="Video" />
+              <CheckBox IsChecked="{Binding IncludeChat}" Content="Chat" />
+            </StackPanel>
+          </StackPanel>
+          <Button Classes="accent" Content="Add to queue" Command="{Binding AddLinksCommand}"
+                  VerticalAlignment="Bottom" Margin="0,0,0,8" Padding="20,8" />
+        </WrapPanel>
+
+        <TextBlock Classes="error" Text="{Binding InputError}"
+                   IsVisible="{Binding InputError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+        <Grid ColumnDefinitions="Auto,*,Auto,8,Auto">
+          <TextBlock Classes="label" Text="Save to" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <TextBox Grid.Column="1" Text="{Binding OutputFolder}" />
+          <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseOutputFolderCommand}" Margin="8,0,0,0" />
+          <Button Grid.Column="4" Content="Open" Command="{Binding OpenOutputFolderCommand}" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <!-- Queue footer -->
+    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto,8,Auto" Margin="0,12,0,0">
+      <TextBlock Classes="muted" Text="{Binding QueueSummary}" VerticalAlignment="Center" />
+      <Button Grid.Column="1" Content="Clear finished" Command="{Binding ClearFinishedCommand}" IsEnabled="{Binding HasItems}" />
+      <Button Grid.Column="3" Content="Cancel all" Command="{Binding CancelAllCommand}" IsEnabled="{Binding HasItems}" />
+    </Grid>
+
+    <!-- Queue -->
+    <Border Classes="card" Padding="8">
+      <Panel>
+        <TextBlock Classes="muted" Text="Downloads will appear here." HorizontalAlignment="Center" VerticalAlignment="Center"
+                   IsVisible="{Binding !HasItems}" />
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding Items}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:QueueItemViewModel">
+                <Border Background="#18181B" CornerRadius="6" Padding="12" Margin="4">
+                  <Grid ColumnDefinitions="*,16,280,8,Auto">
+                    <StackPanel VerticalAlignment="Center">
+                      <TextBlock Classes="title" Text="{Binding Title}" ToolTip.Tip="{Binding Link}" />
+                      <TextBlock Classes="muted" Text="{Binding Subtitle}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="4">
+                      <ProgressBar Value="{Binding Progress}" IsIndeterminate="{Binding IsIndeterminate}"
+                                   Minimum="0" Maximum="100" Height="6" MinHeight="6"
+                                   IsVisible="{Binding !IsFinished}" />
+                      <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" MaxLines="2"
+                                 Foreground="{Binding IsFailed, Converter={x:Static vm:Converters.FailedBrush}}"
+                                 ToolTip.Tip="{Binding StatusText}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                      <Button Content="Chat" Command="{Binding OpenChatCommand}" IsVisible="{Binding CanOpenChat}"
+                              ToolTip.Tip="Open the Twitch-styled chat in your browser" />
+                      <Button Content="Show" Command="{Binding RevealCommand}" IsVisible="{Binding CanReveal}" />
+                      <Button Content="Retry" Command="{Binding RetryCommand}" IsVisible="{Binding CanRetry}" />
+                      <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" />
+                      <Button Content="✕" Command="{Binding RemoveCommand}" ToolTip.Tip="Remove from list" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Panel>
+    </Border>
+  </DockPanel>
+</Window>

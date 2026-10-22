@@ -13,6 +13,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{3C23136A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchVodDownloader.Core.Tests", "tests\TwitchVodDownloader.Core.Tests\TwitchVodDownloader.Core.Tests.csproj", "{32FB1D7C-BF80-427D-84DC-C5392911D011}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchVodDownloader.App", "src\TwitchVodDownloader.App\TwitchVodDownloader.App.csproj", "{4AB9EFC9-4666-4919-96BF-D20DF6310383}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwitchVodDownloader.App.Tests", "tests\TwitchVodDownloader.App.Tests\TwitchVodDownloader.App.Tests.csproj", "{3DB7E3B4-C338-48AE-9917-C0EEDCEE4475}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,10 +38,20 @@ Global
 		{32FB1D7C-BF80-427D-84DC-C5392911D011}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{32FB1D7C-BF80-427D-84DC-C5392911D011}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{32FB1D7C-BF80-427D-84DC-C5392911D011}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AB9EFC9-4666-4919-96BF-D20DF6310383}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AB9EFC9-4666-4919-96BF-D20DF6310383}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AB9EFC9-4666-4919-96BF-D20DF6310383}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AB9EFC9-4666-4919-96BF-D20DF6310383}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3DB7E3B4-C338-48AE-9917-C0EEDCEE4475}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3DB7E3B4-C338-48AE-9917-C0EEDCEE4475}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3DB7E3B4-C338-48AE-9917-C0EEDCEE4475}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3DB7E3B4-C338-48AE-9917-C0EEDCEE4475}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{381D5A85-5CE6-408B-9150-1DF3524D438A} = {F6935F6C-6539-4CC8-8952-B06B8C913453}
 		{8CECB166-AE3A-4A99-874A-C8AD0CDDEDDA} = {F6935F6C-6539-4CC8-8952-B06B8C913453}
 		{32FB1D7C-BF80-427D-84DC-C5392911D011} = {3C23136A-CFFD-492F-B67B-39CBACBDAE1F}
+		{4AB9EFC9-4666-4919-96BF-D20DF6310383} = {F6935F6C-6539-4CC8-8952-B06B8C913453}
+		{3DB7E3B4-C338-48AE-9917-C0EEDCEE4475} = {3C23136A-CFFD-492F-B67B-39CBACBDAE1F}
 	EndGlobalSection
 EndGlobal
