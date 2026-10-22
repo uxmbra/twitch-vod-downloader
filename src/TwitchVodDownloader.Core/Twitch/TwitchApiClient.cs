@@ -175,6 +175,49 @@ public sealed class TwitchApiClient
         };
     }
 
+    /// <summary>
+    /// Global chat badges plus the channel's own (subscriber, bits). Best effort: chat still
+    /// renders without badge pictures if Twitch refuses this.
+    /// </summary>
+    public async Task<IReadOnlyList<Chat.ChatBadgeImage>> GetChatBadgesAsync(string? channelLogin, CancellationToken ct = default)
+    {
+        const string query = """
+            query($login: String!, $hasChannel: Boolean!) {
+              badges { setID version title imageURL(size: DOUBLE) }
+              user(login: $login) @include(if: $hasChannel) {
+                broadcastBadges { setID version title imageURL(size: DOUBLE) }
+              }
+            }
+            """;
+
+        var data = await QueryAsync(
+            new JsonObject
+            {
+                ["query"] = query,
+                ["variables"] = new JsonObject { ["login"] = channelLogin ?? "", ["hasChannel"] = !string.IsNullOrEmpty(channelLogin) },
+            },
+            false,
+            ct);
+
+        var result = new Dictionary<string, Chat.ChatBadgeImage>(StringComparer.Ordinal);
+
+        // Channel badges come second so they replace the generic global versions.
+        foreach (var badge in (data["badges"]?.AsArray() ?? []).Concat(data["user"]?["broadcastBadges"]?.AsArray() ?? []))
+        {
+            var setId = badge?["setID"]?.GetValue<string>();
+            var version = badge?["version"]?.GetValue<string>();
+            var url = badge?["imageURL"]?.GetValue<string>();
+            if (setId is null || version is null || !Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                continue;
+            }
+
+            result[Chat.ChatBadgeImage.Key(setId, version)] = new Chat.ChatBadgeImage(setId, version, uri, badge?["title"]?.GetValue<string>());
+        }
+
+        return [.. result.Values];
+    }
+
     /// <summary>The clip file URL only works with the signed token appended.</summary>
     public static Uri SignClipUri(ClipQuality quality, PlaybackAccessToken token) =>
         new($"{quality.SourceUri}?sig={Uri.EscapeDataString(token.Signature)}&token={Uri.EscapeDataString(token.Value)}");

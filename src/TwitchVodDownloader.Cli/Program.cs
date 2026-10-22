@@ -23,7 +23,8 @@ const string Usage = """
           --auth-token <tok>  twitch.tv auth-token cookie, for subscriber-only VODs.
                               Can also be set with the TVD_AUTH_TOKEN environment variable.
           --ffmpeg <path>     Path to ffmpeg if it is not on PATH.
-          --chat              Also save the chat (.chat.json and .chat.txt next to the video).
+          --chat              Also save the chat next to the video: .chat.html (Twitch-styled,
+                              for reading and screenshots), .chat.json and .chat.txt.
           --chat-only         Save only the chat, no video.
           --h264-only         Skip HEVC/AV1 renditions (for players without those codecs).
           --temp <dir>        Folder for temporary segment files.
@@ -157,7 +158,7 @@ static async Task<int> DownloadAsync(TwitchApiClient api, HttpClient http, CliOp
 
             if (result.ChatPath is not null)
             {
-                Console.WriteLine($"{prefix}Saved {result.ChatMessages:N0} chat messages: {Path.ChangeExtension(result.ChatPath, null)}.json / .txt");
+                Console.WriteLine($"{prefix}Saved {result.ChatMessages:N0} chat messages: {Path.ChangeExtension(result.ChatPath, null)}.html / .json / .txt");
             }
 
             if (result.Warning is not null)
