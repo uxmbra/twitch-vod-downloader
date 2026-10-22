@@ -14,12 +14,31 @@ and HEVC/AV1 renditions (up to 1440p) from channels using Enhanced Broadcasting.
 | 1 | Download engine + command-line tool | ✅ |
 | 2 | Chat download (JSON + text) | ✅ |
 | 3 | Desktop app (Avalonia) with download queue | ✅ |
-| 4 | Installer with bundled ffmpeg, Twitch login for sub-only VODs | planned |
+| 4 | Single-file Windows release with bundled ffmpeg | ✅ |
 
-## Requirements
+## Download
+
+Grab the latest `TwitchVodDownloader-<version>-win-x64.zip` from the
+[Releases page](https://github.com/uxmbra/twitch-vod-downloader/releases), unzip it anywhere and
+run `TwitchVodDownloader.exe`. Nothing to install: .NET and ffmpeg are included.
+(Windows SmartScreen may warn the first time because the exe isn't code-signed; choose
+*More info → Run anyway*.)
+
+The command-line tool is a separate `tvd-cli-<version>-win-x64.zip`; it uses ffmpeg from your
+PATH (`winget install Gyan.FFmpeg`) or `--ffmpeg <path>`.
+
+## Building from source
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - ffmpeg on your PATH: `winget install Gyan.FFmpeg`
+
+To build the release zips yourself: `./build/package.ps1 -Version 0.4.0` (output in `artifacts/`).
+
+## Releasing
+
+Push a tag like `v0.4.0`. The Release workflow runs the tests, builds both zips (downloading
+an LGPL ffmpeg build) and publishes them as a GitHub release. Every pull request also builds
+a test copy, downloadable from the CI run's *Artifacts*.
 
 ## Desktop app
 
@@ -117,4 +136,5 @@ For personal use. Respect creators' rights and Twitch's terms of service.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Release builds include an unmodified LGPL build of [FFmpeg](https://ffmpeg.org);
+its license is in the `licenses` folder of the zip.

@@ -4,6 +4,14 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>tvd</AssemblyName>
     <RootNamespace>TwitchVodDownloader.Cli</RootNamespace>
+    <Version>0.4.0</Version>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
   <ItemGroup>

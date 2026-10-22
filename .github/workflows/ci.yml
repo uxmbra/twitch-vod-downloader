@@ -23,3 +23,26 @@ jobs:
 
       - name: Test
         run: dotnet test --configuration Release --no-build --verbosity normal
+
+  package:
+    # Proves the release packaging works on every PR and leaves a test build to download.
+    runs-on: windows-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Package
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./build/package.ps1 -Version 0.0.0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-build
+          path: artifacts/*.zip
+          retention-days: 7
